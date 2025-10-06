@@ -156,9 +156,8 @@ const GameCanvas = () => {
           hazard: 0,
         };
 
-        // Replace the existing spawnItem function with this updated version
+        // Replace the spawnItem function with this simpler version
         function spawnItem(type) {
-          const pos = getRandomPosition();
           const config = {
             powerup: {
               mango: { sprite: "mango", energy: 20 },
@@ -178,46 +177,45 @@ const GameCanvas = () => {
 
           const itemConfig = config[type][itemType];
 
-          // Generate random target position
-          const targetX = k.rand(50, k.width() - 50);
-          const targetY = k.rand(50, k.height() - 50);
-
-          // Calculate random speed between 50 and 150
-          const speed = k.rand(50, 150);
+          // Random starting position along screen edges
+          let x, y;
+          if (k.rand() < 0.5) {
+            x = k.rand() < 0.5 ? 0 : k.width();
+            y = k.rand(0, k.height());
+          } else {
+            x = k.rand(0, k.width());
+            y = k.rand() < 0.5 ? 0 : k.height();
+          }
 
           activeItems[type]++;
 
-          const item = k.add([
+          return k.add([
             k.sprite(itemConfig.sprite),
-            k.pos(pos.x, pos.y),
+            k.pos(x, y),
             k.anchor("center"),
             k.scale(0.1),
             k.area(),
             type,
             { energy: itemConfig.energy },
-            k.move(k.vec2(targetX - pos.x, targetY - pos.y).unit(), speed),
+            {
+              speed: k.rand(100, 200),
+              direction: k.rand(-Math.PI, Math.PI),
+              update() {
+                this.move(
+                  Math.cos(this.direction) * this.speed,
+                  Math.sin(this.direction) * this.speed
+                );
+
+                // Bounce off edges
+                if (this.pos.x < 0 || this.pos.x > k.width()) {
+                  this.direction = Math.PI - this.direction;
+                }
+                if (this.pos.y < 0 || this.pos.y > k.height()) {
+                  this.direction = -this.direction;
+                }
+              },
+            },
           ]);
-
-          // Change direction randomly every 2-4 seconds
-          function changeDirection() {
-            if (!item.exists()) return; // Stop if item was destroyed
-
-            const newTargetX = k.rand(50, k.width() - 50);
-            const newTargetY = k.rand(50, k.height() - 50);
-            const newSpeed = k.rand(50, 150);
-
-            item.moveUpdate = k
-              .vec2(newTargetX - item.pos.x, newTargetY - item.pos.y)
-              .unit()
-              .scale(newSpeed);
-
-            k.wait(k.rand(2, 4), changeDirection);
-          }
-
-          // Start changing direction
-          k.wait(k.rand(2, 4), changeDirection);
-
-          return item;
         }
 
         // Update collision handlers
@@ -225,32 +223,26 @@ const GameCanvas = () => {
           updateEnergy(powerup.energy);
           powerup.destroy();
           activeItems.powerup--;
-
-          // Always spawn new powerup after delay
-          k.wait(k.rand(1, 2), () => {
-            spawnItem("powerup");
-          });
+          spawnItem("powerup"); // Spawn immediately
         });
 
         criminal.onCollide("hazard", (hazard) => {
           updateEnergy(hazard.energy);
           hazard.destroy();
           activeItems.hazard--;
-
-          // Always spawn new hazard after delay
-          k.wait(k.rand(1, 2), () => {
-            spawnItem("hazard");
-          });
+          spawnItem("hazard"); // Spawn immediately
         });
 
-        // Initial item spawns - stagger them
+        // Maintain item count
+        k.loop(1, () => {
+          while (activeItems.powerup < 3) spawnItem("powerup");
+          while (activeItems.hazard < 3) spawnItem("hazard");
+        });
+
+        // Initial spawns
         for (let i = 0; i < 3; i++) {
-          k.wait(i * 0.5, () => {
-            spawnItem("powerup");
-          });
-          k.wait(i * 0.5 + 0.25, () => {
-            spawnItem("hazard");
-          });
+          spawnItem("powerup");
+          spawnItem("hazard");
         }
 
         // Add gradual energy decrease over time
