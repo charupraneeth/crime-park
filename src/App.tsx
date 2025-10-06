@@ -122,6 +122,10 @@ const GameCanvas = () => {
           if (movement.x > 0) movement.x = 0;
         });
 
+        k.onKeyPress("l", () => {
+          loseLife();
+        });
+
         // Update bean position every frame
         k.onUpdate(() => {
           criminal.move(movement.x * SPEED, movement.y * SPEED);
@@ -172,6 +176,52 @@ const GameCanvas = () => {
             spawnRaindrop();
           }
         });
+
+        // Add lives system before creating the criminal
+        let playerLives = 3;
+
+        // Add lives display
+        const livesLabel = k.add([
+          k.text(playerLives.toString(), {
+            size: 32,
+            font: "arial",
+          }),
+          k.pos(k.width() - 50, 30),
+          k.color(k.rgb(255, 50, 50)),
+          k.fixed(),
+        ]);
+
+        // Add a function to handle life loss
+        function loseLife() {
+          console.log("Life lost!");
+          if (playerLives > 0) {
+            playerLives--;
+            livesLabel.text = playerLives.toString();
+
+            if (playerLives <= 0) {
+              k.destroy(criminal);
+              k.go("gameOver");
+            }
+          }
+        }
+
+        // Add game over scene
+        k.scene("gameOver", () => {
+          k.add([
+            k.text("Game Over!", {
+              size: 48,
+              font: "arial",
+            }),
+            k.pos(k.width() / 2, k.height() / 2),
+            k.anchor("center"),
+          ]);
+
+          // Restart game on space press
+          k.onKeyPress("space", () => {
+            playerLives = 3;
+            k.go("main");
+          });
+        });
       });
 
       k.go("main");
@@ -189,7 +239,11 @@ const GameCanvas = () => {
 const App = () => {
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
     >
       <h1>My Kaboom React Game</h1>
       <GameCanvas />
