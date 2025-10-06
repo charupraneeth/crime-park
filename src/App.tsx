@@ -2,6 +2,11 @@ import { useRef, useEffect } from "react";
 import kaboom from "kaboom";
 import parkBg from "./assets/park.png";
 import criminalSprite from "./assets/criminal.png";
+import flowerSprite from "./assets/flower.png";
+import mangoSprite from "./assets/mango.png";
+import broccoliSprite from "./assets/broccoli.png";
+import iceSprite from "./assets/ice.png";
+import glassSprite from "./assets/glass.png";
 
 const GameCanvas = () => {
   const canvasRef = useRef(null);
@@ -21,6 +26,11 @@ const GameCanvas = () => {
       k.loadBean();
       k.loadSprite("criminal", criminalSprite);
       k.loadSprite("park", parkBg);
+      k.loadSprite("flower", flowerSprite);
+      k.loadSprite("mango", mangoSprite);
+      k.loadSprite("broccoli", broccoliSprite);
+      k.loadSprite("ice", iceSprite);
+      k.loadSprite("glass", glassSprite);
 
       k.scene("main", () => {
         // Remove the layers definition
@@ -31,8 +41,44 @@ const GameCanvas = () => {
           k.pos(k.width() / 2, k.height() / 2),
           k.anchor("center"),
           k.scale(0.9),
-          // Remove layer property
         ]);
+
+        k.add([
+          k.sprite("flower"),
+          k.pos(k.width() / 2, k.height() / 2),
+          k.anchor("center"),
+          k.scale(0.1),
+        ]);
+
+        k.add([
+          k.sprite("mango"),
+          k.pos(k.width() / 2 + 100, k.height() / 2 + 50),
+          k.anchor("center"),
+          k.scale(0.1),
+        ]);
+
+        k.add([
+          k.sprite("broccoli"),
+          k.pos(k.width() / 2 - 100, k.height() / 2 + 50),
+          k.anchor("center"),
+          k.scale(0.1),
+        ]);
+
+        k.add([
+          k.sprite("ice"),
+          k.pos(k.width() / 2, k.height() / 2 - 100),
+          k.anchor("center"),
+          k.scale(0.1),
+        ]);
+
+        k.add([
+          k.sprite("glass"),
+          k.pos(k.width() / 2 + 150, k.height() / 2 - 80),
+          k.anchor("center"),
+          k.scale(0.1),
+        ]);
+
+        // Create the criminal character
 
         const criminal = k.add([
           k.sprite("criminal"),
@@ -40,7 +86,6 @@ const GameCanvas = () => {
           k.anchor("center"),
           k.scale(0.15),
           k.area(),
-          // Remove layer property
         ]);
 
         // Create movement vector
@@ -96,6 +141,35 @@ const GameCanvas = () => {
             criminal.pos.y = k.height();
           } else if (newPos.y > k.height()) {
             criminal.pos.y = 0;
+          }
+        });
+
+        // Add rain particle generator
+        function spawnRaindrop() {
+          const x = k.rand(0, k.width()); // Random x position
+
+          const raindrop = k.add([
+            k.rect(2, 10), // Rain drop shape
+            k.pos(x, -10), // Start above screen
+            k.color(k.rgb(190, 230, 255)), // Light blue color
+            k.opacity(0.6),
+            k.move(k.DOWN, k.rand(400, 600)), // Random speed
+            k.rotate(10), // Slight tilt
+          ]);
+
+          // Destroy raindrop when it goes off screen
+          raindrop.onUpdate(() => {
+            if (raindrop.pos.y > k.height() + 20) {
+              raindrop.destroy();
+            }
+          });
+        }
+
+        // Spawn raindrops on interval
+        k.loop(0.1, () => {
+          for (let i = 0; i < 3; i++) {
+            // Spawn multiple drops per interval
+            spawnRaindrop();
           }
         });
       });

@@ -1,17 +1,16 @@
 ### Slap some code
 
-- Ice
+- [] Ice
+
 - Glass
 
 - Flower
 - Broccoli
 - Mango
 
-- Road
-
-- Chain
-- Park
-
-- Rain
+- [x] Road
+- [x] Chain
+- [x] Park
+- [x] Rain
 
 - Painting
