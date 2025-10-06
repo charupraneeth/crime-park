@@ -7,6 +7,7 @@ import mangoSprite from "./assets/mango.png";
 import broccoliSprite from "./assets/broccoli.png";
 import iceSprite from "./assets/ice.png";
 import glassSprite from "./assets/glass.png";
+import bgm from "./assets/bgm.mp3";
 
 const GameCanvas = () => {
   const canvasRef = useRef(null);
@@ -41,41 +42,6 @@ const GameCanvas = () => {
           k.pos(k.width() / 2, k.height() / 2),
           k.anchor("center"),
           k.scale(0.9),
-        ]);
-
-        k.add([
-          k.sprite("flower"),
-          k.pos(k.width() / 2, k.height() / 2),
-          k.anchor("center"),
-          k.scale(0.1),
-        ]);
-
-        k.add([
-          k.sprite("mango"),
-          k.pos(k.width() / 2 + 100, k.height() / 2 + 50),
-          k.anchor("center"),
-          k.scale(0.1),
-        ]);
-
-        k.add([
-          k.sprite("broccoli"),
-          k.pos(k.width() / 2 - 100, k.height() / 2 + 50),
-          k.anchor("center"),
-          k.scale(0.1),
-        ]);
-
-        k.add([
-          k.sprite("ice"),
-          k.pos(k.width() / 2, k.height() / 2 - 100),
-          k.anchor("center"),
-          k.scale(0.1),
-        ]);
-
-        k.add([
-          k.sprite("glass"),
-          k.pos(k.width() / 2 + 150, k.height() / 2 - 80),
-          k.anchor("center"),
-          k.scale(0.1),
         ]);
 
         // Create the criminal character
@@ -158,67 +124,134 @@ const GameCanvas = () => {
           }
         }
 
-        // Add collision areas to collectibles
-        const mango = k.add([
-          k.sprite("mango"),
-          k.pos(k.width() / 2 + 100, k.height() / 2 + 50),
-          k.anchor("center"),
-          k.scale(0.1),
-          k.area(), // Add collision area
-          "powerup", // Add tag
-          { energy: 20 }, // Energy boost amount
-        ]);
+        // Add these helper functions after energy bar setup
+        function getRandomPosition() {
+          const edge = k.rand(0, 3); // 0: top, 1: right, 2: bottom, 3: left
+          let x, y;
 
-        const flower = k.add([
-          k.sprite("flower"),
-          k.pos(k.width() / 2, k.height() / 2),
-          k.anchor("center"),
-          k.scale(0.1),
-          k.area(),
-          "powerup",
-          { energy: 15 },
-        ]);
+          switch (edge) {
+            case 0: // top
+              x = k.rand(50, k.width() - 50);
+              y = -20;
+              break;
+            case 1: // right
+              x = k.width() + 20;
+              y = k.rand(50, k.height() - 50);
+              break;
+            case 2: // bottom
+              x = k.rand(50, k.width() - 50);
+              y = k.height() + 20;
+              break;
+            default: // left
+              x = -20;
+              y = k.rand(50, k.height() - 50);
+              break;
+          }
+          return { x, y };
+        }
 
-        const broccoli = k.add([
-          k.sprite("broccoli"),
-          k.pos(k.width() / 2 - 100, k.height() / 2 + 50),
-          k.anchor("center"),
-          k.scale(0.1),
-          k.area(),
-          "powerup",
-          { energy: 25 },
-        ]);
+        // Modify the spawn system
+        const activeItems = {
+          powerup: 0,
+          hazard: 0,
+        };
 
-        const ice = k.add([
-          k.sprite("ice"),
-          k.pos(k.width() / 2, k.height() / 2 - 100),
-          k.anchor("center"),
-          k.scale(0.1),
-          k.area(),
-          "hazard",
-          { energy: -30 },
-        ]);
+        // Replace the existing spawnItem function with this updated version
+        function spawnItem(type) {
+          const pos = getRandomPosition();
+          const config = {
+            powerup: {
+              mango: { sprite: "mango", energy: 20 },
+              flower: { sprite: "flower", energy: 15 },
+              broccoli: { sprite: "broccoli", energy: 25 },
+            },
+            hazard: {
+              ice: { sprite: "ice", energy: -30 },
+              glass: { sprite: "glass", energy: -20 },
+            },
+          };
 
-        const glass = k.add([
-          k.sprite("glass"),
-          k.pos(k.width() / 2 + 150, k.height() / 2 - 80),
-          k.anchor("center"),
-          k.scale(0.1),
-          k.area(),
-          "hazard",
-          { energy: -20 },
-        ]);
+          const itemType =
+            type === "powerup"
+              ? k.choose(["mango", "flower", "broccoli"])
+              : k.choose(["ice", "glass"]);
 
-        // Add collision detection to criminal
+          const itemConfig = config[type][itemType];
+
+          // Generate random target position
+          const targetX = k.rand(50, k.width() - 50);
+          const targetY = k.rand(50, k.height() - 50);
+
+          // Calculate random speed between 50 and 150
+          const speed = k.rand(50, 150);
+
+          activeItems[type]++;
+
+          const item = k.add([
+            k.sprite(itemConfig.sprite),
+            k.pos(pos.x, pos.y),
+            k.anchor("center"),
+            k.scale(0.1),
+            k.area(),
+            type,
+            { energy: itemConfig.energy },
+            k.move(k.vec2(targetX - pos.x, targetY - pos.y).unit(), speed),
+          ]);
+
+          // Change direction randomly every 2-4 seconds
+          function changeDirection() {
+            if (!item.exists()) return; // Stop if item was destroyed
+
+            const newTargetX = k.rand(50, k.width() - 50);
+            const newTargetY = k.rand(50, k.height() - 50);
+            const newSpeed = k.rand(50, 150);
+
+            item.moveUpdate = k
+              .vec2(newTargetX - item.pos.x, newTargetY - item.pos.y)
+              .unit()
+              .scale(newSpeed);
+
+            k.wait(k.rand(2, 4), changeDirection);
+          }
+
+          // Start changing direction
+          k.wait(k.rand(2, 4), changeDirection);
+
+          return item;
+        }
+
+        // Update collision handlers
         criminal.onCollide("powerup", (powerup) => {
           updateEnergy(powerup.energy);
           powerup.destroy();
+          activeItems.powerup--;
+
+          // Always spawn new powerup after delay
+          k.wait(k.rand(1, 2), () => {
+            spawnItem("powerup");
+          });
         });
 
         criminal.onCollide("hazard", (hazard) => {
           updateEnergy(hazard.energy);
           hazard.destroy();
+          activeItems.hazard--;
+
+          // Always spawn new hazard after delay
+          k.wait(k.rand(1, 2), () => {
+            spawnItem("hazard");
+          });
         });
+
+        // Initial item spawns - stagger them
+        for (let i = 0; i < 3; i++) {
+          k.wait(i * 0.5, () => {
+            spawnItem("powerup");
+          });
+          k.wait(i * 0.5 + 0.25, () => {
+            spawnItem("hazard");
+          });
+        }
 
         // Add gradual energy decrease over time
         k.loop(1, () => {
