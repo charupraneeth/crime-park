@@ -10,11 +10,10 @@ import glassSprite from "./assets/glass.png";
 import bgm from "./assets/bgm.mp3";
 
 const GameCanvas = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const SPEED = 320;
 
-  const SPEED = 320; // Adjusted speed for smoother movement
-
-  // Move scene definitions outside of useEffect
+  // Single createScenes definition
   const createScenes = (k: KaboomCtx) => {
     // Game Over scene
     k.scene("gameOver", () => {
@@ -27,7 +26,23 @@ const GameCanvas = () => {
         k.anchor("center"),
       ]);
 
+      // Add touch instruction
+      k.add([
+        k.text("Press SPACE or Tap Screen to restart", {
+          size: 32,
+          font: "arial",
+        }),
+        k.pos(k.width() / 2, k.height() / 2 + 80),
+        k.anchor("center"),
+        k.color(k.rgb(255, 255, 255)),
+      ]);
+
       k.onKeyPress("space", () => {
+        k.go("main");
+      });
+
+      // Add touch handler
+      k.onTouchStart(() => {
         k.go("main");
       });
     });
@@ -64,9 +79,9 @@ const GameCanvas = () => {
         k.color(k.rgb(255, 255, 255)),
       ]);
 
-      // Add start prompt
+      // Update the prompt text for both touch and keyboard
       const prompt = k.add([
-        k.text("Press SPACE to start", {
+        k.text("Press SPACE or Tap Screen to start", {
           size: 32,
           font: "arial",
         }),
@@ -81,20 +96,25 @@ const GameCanvas = () => {
         prompt.opacity = prompt.opacity === 1 ? 0 : 1;
       });
 
-      // Start game on space press
+      // Start game on space press or touch
       k.onKeyPress("space", () => {
+        k.go("main");
+      });
+
+      // Add touch handler for the entire screen
+      k.onTouchStart(() => {
         k.go("main");
       });
     });
 
-    // Main scene
+    // Main scene with touch controls
     k.scene("main", () => {
       const music = k.play("bgm", {
-        loop: true, // Make the music loop
-        volume: 0.5, // Set volume to 50%
+        loop: true,
+        volume: 0.5,
       });
 
-      // Add background first (it will automatically be rendered behind)
+      // Add background
       k.add([
         k.sprite("park"),
         k.pos(k.width() / 2, k.height() / 2),
@@ -103,7 +123,6 @@ const GameCanvas = () => {
       ]);
 
       // Create the criminal character
-
       const criminal = k.add([
         k.sprite("criminal"),
         k.pos(k.width() / 2, k.height() / 2),
@@ -112,13 +131,55 @@ const GameCanvas = () => {
         k.area(),
       ]);
 
-      // Create movement vector
+      // Movement vector
       const movement = {
         x: 0,
         y: 0,
       };
 
-      // Update movement vector on key down
+      // Touch controls
+      let touchStart = k.vec2(0, 0);
+      let touchCurrent = k.vec2(0, 0);
+      let isTouching = false;
+
+      // Add touch area visual
+      const touchArea = k.add([
+        k.circle(50),
+        k.pos(k.width() - 100, k.height() - 100),
+        k.color(k.rgb(255, 255, 255)),
+        k.opacity(0.3),
+        k.fixed(),
+      ]);
+
+      // Touch event handlers
+      k.onTouchStart((pos) => {
+        if (pos.x > k.width() / 2 && pos.y > k.height() / 2) {
+          isTouching = true;
+          touchStart = pos;
+          touchCurrent = pos;
+        }
+      });
+
+      k.onTouchMove((pos) => {
+        if (isTouching) {
+          touchCurrent = pos;
+          const diff = touchCurrent.sub(touchStart);
+          const maxDistance = 50;
+          const normalized = diff.unit();
+          const distance = Math.min(diff.len(), maxDistance);
+
+          movement.x = normalized.x * (distance / maxDistance);
+          movement.y = normalized.y * (distance / maxDistance);
+        }
+      });
+
+      k.onTouchEnd(() => {
+        isTouching = false;
+        movement.x = 0;
+        movement.y = 0;
+      });
+
+      // Keyboard controls
       k.onKeyDown("up", () => {
         movement.y = -1;
       });
@@ -132,7 +193,6 @@ const GameCanvas = () => {
         movement.x = 1;
       });
 
-      // Reset movement vector on key release
       k.onKeyRelease("up", () => {
         if (movement.y < 0) movement.y = 0;
       });
@@ -144,10 +204,6 @@ const GameCanvas = () => {
       });
       k.onKeyRelease("right", () => {
         if (movement.x > 0) movement.x = 0;
-      });
-
-      k.onKeyPress("l", () => {
-        loseLife();
       });
 
       // Add energy system
@@ -372,6 +428,43 @@ const GameCanvas = () => {
     k.scene("blank", () => {});
   };
 
+  // Add orientation check and responsive sizing
+  useEffect(() => {
+    const handleResize = () => {
+      if (!canvasRef.current) return;
+
+      const canvas = canvasRef.current;
+      const aspectRatio = 4 / 3; // Keep 800x600 ratio
+
+      // Get viewport dimensions
+      const vw = Math.max(
+        document.documentElement.clientWidth || 0,
+        window.innerWidth || 0
+      );
+      const vh = Math.max(
+        document.documentElement.clientHeight || 0,
+        window.innerHeight || 0
+      );
+
+      // Calculate size maintaining aspect ratio
+      let width = vw;
+      let height = width / aspectRatio;
+
+      if (height > vh) {
+        height = vh;
+        width = height * aspectRatio;
+      }
+
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -406,18 +499,32 @@ const GameCanvas = () => {
     };
   }, []);
 
-  return <canvas ref={canvasRef} style={{ width: "800px", height: "600px" }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: "800px",
+        height: "600px",
+        touchAction: "none", // Prevent default touch actions
+      }}
+    />
+  );
 };
 
-const App = () => {
+// Update App component for proper mobile layout
+const App: React.FC = () => {
   return (
     <div
       style={{
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        minHeight: "100vh", // This ensures full viewport height
-        backgroundColor: "#000", // Optional: adds black background
+        minHeight: "100vh",
+        backgroundColor: "#000",
+        overflow: "hidden", // Prevent scrolling
+        position: "fixed", // Lock viewport
+        width: "100%",
+        height: "100%",
       }}
     >
       <GameCanvas />
