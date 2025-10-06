@@ -126,6 +126,105 @@ const GameCanvas = () => {
           loseLife();
         });
 
+        // Add energy system
+        let energy = 100; // Start with full energy
+        const MAX_ENERGY = 100;
+
+        // Create energy bar background
+        const energyBarBg = k.add([
+          k.rect(200, 20),
+          k.pos(k.width() / 2 - 100, 20),
+          k.color(k.rgb(100, 100, 100)),
+          k.fixed(),
+        ]);
+
+        // Create energy bar foreground
+        const energyBar = k.add([
+          k.rect(200, 20),
+          k.pos(k.width() / 2 - 100, 20),
+          k.color(k.rgb(0, 255, 0)),
+          k.fixed(),
+        ]);
+
+        // Function to update energy bar
+        function updateEnergy(amount) {
+          energy = k.clamp(energy + amount, 0, MAX_ENERGY);
+          energyBar.width = (energy / MAX_ENERGY) * 200;
+
+          if (energy <= 0) {
+            loseLife();
+            energy = MAX_ENERGY; // Restore energy after losing a life
+            energyBar.width = 200;
+          }
+        }
+
+        // Add collision areas to collectibles
+        const mango = k.add([
+          k.sprite("mango"),
+          k.pos(k.width() / 2 + 100, k.height() / 2 + 50),
+          k.anchor("center"),
+          k.scale(0.1),
+          k.area(), // Add collision area
+          "powerup", // Add tag
+          { energy: 20 }, // Energy boost amount
+        ]);
+
+        const flower = k.add([
+          k.sprite("flower"),
+          k.pos(k.width() / 2, k.height() / 2),
+          k.anchor("center"),
+          k.scale(0.1),
+          k.area(),
+          "powerup",
+          { energy: 15 },
+        ]);
+
+        const broccoli = k.add([
+          k.sprite("broccoli"),
+          k.pos(k.width() / 2 - 100, k.height() / 2 + 50),
+          k.anchor("center"),
+          k.scale(0.1),
+          k.area(),
+          "powerup",
+          { energy: 25 },
+        ]);
+
+        const ice = k.add([
+          k.sprite("ice"),
+          k.pos(k.width() / 2, k.height() / 2 - 100),
+          k.anchor("center"),
+          k.scale(0.1),
+          k.area(),
+          "hazard",
+          { energy: -30 },
+        ]);
+
+        const glass = k.add([
+          k.sprite("glass"),
+          k.pos(k.width() / 2 + 150, k.height() / 2 - 80),
+          k.anchor("center"),
+          k.scale(0.1),
+          k.area(),
+          "hazard",
+          { energy: -20 },
+        ]);
+
+        // Add collision detection to criminal
+        criminal.onCollide("powerup", (powerup) => {
+          updateEnergy(powerup.energy);
+          powerup.destroy();
+        });
+
+        criminal.onCollide("hazard", (hazard) => {
+          updateEnergy(hazard.energy);
+          hazard.destroy();
+        });
+
+        // Add gradual energy decrease over time
+        k.loop(1, () => {
+          updateEnergy(-2); // Decrease energy by 2 every second
+        });
+
         // Update bean position every frame
         k.onUpdate(() => {
           criminal.move(movement.x * SPEED, movement.y * SPEED);
