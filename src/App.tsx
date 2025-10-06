@@ -9,7 +9,6 @@ import iceSprite from "./assets/ice.png";
 import glassSprite from "./assets/glass.png";
 import bgm from "./assets/bgm.mp3";
 
-type SpawnType = "powerup" | "hazard";
 const GameCanvas = () => {
   const canvasRef = useRef(null);
 
@@ -156,7 +155,7 @@ const GameCanvas = () => {
       const MAX_ENERGY = 100;
 
       // Create energy bar background
-      const energyBarBg = k.add([
+      k.add([
         k.rect(200, 20),
         k.pos(k.width() / 2 - 100, 20),
         k.color(k.rgb(100, 100, 100)),
@@ -190,7 +189,7 @@ const GameCanvas = () => {
       };
 
       // Replace the spawnItem function with this simpler version
-      function spawnItem(type) {
+      function spawnItem(type: "powerup" | "hazard") {
         const config = {
           powerup: {
             mango: { sprite: "mango", energy: 20 },
