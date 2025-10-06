@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import kaboom from "kaboom";
+import kaboom, { type KaboomCtx } from "kaboom";
 import parkBg from "./assets/park.png";
 import criminalSprite from "./assets/criminal.png";
 import flowerSprite from "./assets/flower.png";
@@ -9,13 +9,14 @@ import iceSprite from "./assets/ice.png";
 import glassSprite from "./assets/glass.png";
 import bgm from "./assets/bgm.mp3";
 
+type SpawnType = "powerup" | "hazard";
 const GameCanvas = () => {
   const canvasRef = useRef(null);
 
   const SPEED = 320; // Adjusted speed for smoother movement
 
   // Move scene definitions outside of useEffect
-  const createScenes = (k) => {
+  const createScenes = (k: KaboomCtx) => {
     // Game Over scene
     k.scene("gameOver", () => {
       k.add([
@@ -73,6 +74,7 @@ const GameCanvas = () => {
         k.pos(k.width() / 2, k.height() * 0.7),
         k.anchor("center"),
         k.color(k.rgb(255, 255, 255)),
+        k.opacity(1),
       ]);
 
       // Make the prompt blink
@@ -170,7 +172,7 @@ const GameCanvas = () => {
       ]);
 
       // Function to update energy bar
-      function updateEnergy(amount) {
+      function updateEnergy(amount: number) {
         energy = k.clamp(energy + amount, 0, MAX_ENERGY);
         energyBar.width = (energy / MAX_ENERGY) * 200;
 
@@ -179,32 +181,6 @@ const GameCanvas = () => {
           energy = MAX_ENERGY; // Restore energy after losing a life
           energyBar.width = 200;
         }
-      }
-
-      // Add these helper functions after energy bar setup
-      function getRandomPosition() {
-        const edge = k.rand(0, 3); // 0: top, 1: right, 2: bottom, 3: left
-        let x, y;
-
-        switch (edge) {
-          case 0: // top
-            x = k.rand(50, k.width() - 50);
-            y = -20;
-            break;
-          case 1: // right
-            x = k.width() + 20;
-            y = k.rand(50, k.height() - 50);
-            break;
-          case 2: // bottom
-            x = k.rand(50, k.width() - 50);
-            y = k.height() + 20;
-            break;
-          default: // left
-            x = -20;
-            y = k.rand(50, k.height() - 50);
-            break;
-        }
-        return { x, y };
       }
 
       // Modify the spawn system
@@ -380,6 +356,7 @@ const GameCanvas = () => {
           livesLabel.text = playerLives.toString();
 
           if (playerLives <= 0) {
+            music.stop(); // Stop music before game over
             k.destroy(criminal);
             k.go("gameOver");
           }

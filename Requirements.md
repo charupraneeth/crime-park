@@ -1,12 +1,12 @@
 ### Slap some code
 
-- [] Ice
+- [x] Ice
 
-- Glass
+- [x] Glass
 
-- Flower
-- Broccoli
-- Mango
+- [x] Flower
+- [x] Broccoli
+- [x] Mango
 
 - [x] Road
 - [x] Chain
